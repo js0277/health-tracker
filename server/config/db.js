@@ -61,8 +61,7 @@ db.exec(`
     protein REAL NOT NULL,
     fat REAL NOT NULL,
     carbs REAL NOT NULL,
-    FOREIGN KEY (record_id) REFERENCES diet_records(id) ON DELETE CASCADE,
-    FOREIGN KEY (food_id) REFERENCES foods(id)
+    FOREIGN KEY (record_id) REFERENCES diet_records(id) ON DELETE CASCADE
   );
 
   CREATE TABLE IF NOT EXISTS weight_records (
@@ -124,5 +123,6 @@ if (foodCount.cnt === 0) {
 }
 
 module.exports = db
+
 
 
