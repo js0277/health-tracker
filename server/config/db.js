@@ -15,7 +15,9 @@ db.pragma('foreign_keys = ON')
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    openid TEXT UNIQUE,
+    username TEXT UNIQUE,
+    password_hash TEXT,
+    openid TEXT,
     nickname TEXT DEFAULT '新用户',
     avatar TEXT DEFAULT '',
     gender INTEGER DEFAULT 0,
@@ -76,10 +78,7 @@ db.exec(`
 `)
 
 // 初始化默认用户和示例食物（只执行一次）
-const userCount = db.prepare('SELECT COUNT(*) as cnt FROM users').get()
-if (userCount.cnt === 0) {
-  db.prepare("INSERT INTO users (openid, nickname) VALUES ('default', '默认用户')").run()
-}
+// No default user - users register themselves
 
 const foodCount = db.prepare('SELECT COUNT(*) as cnt FROM foods').get()
 if (foodCount.cnt === 0) {
@@ -125,3 +124,5 @@ if (foodCount.cnt === 0) {
 }
 
 module.exports = db
+
+
