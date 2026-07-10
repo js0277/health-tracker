@@ -37,7 +37,10 @@ export const foodApi = {
 }
 
 export const dietApi = {
-  getToday: () => request('/diets/today'),
+  getToday: (date) => {
+    const params = date ? `?date=${date}` : ''
+    return request(`/diets/today${params}`)
+  },
   addRecord: (data) => request('/diets', {
     method: 'POST',
     body: JSON.stringify(data),

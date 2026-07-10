@@ -2,9 +2,9 @@ const express = require('express')
 const router = express.Router()
 const db = require('../config/db')
 
-// 获取今日记录
+// 获取指定日期记录（默认今天）
 router.get('/today', (req, res) => {
-  const today = new Date().toISOString().slice(0, 10)
+  const recordDate = req.query.date || new Date().toISOString().slice(0, 10)
   const userId = req.user.id
 
   const records = db.prepare(`
@@ -13,7 +13,7 @@ router.get('/today', (req, res) => {
     FROM diet_records dr
     LEFT JOIN diet_record_items dri ON dr.id = dri.record_id
     WHERE dr.user_id = ? AND dr.record_date = ?
-  `).all(userId, today)
+  `).all(userId, recordDate)
 
   // 按 meal_type 分组
   const grouped = { breakfast: [], lunch: [], dinner: [], snack: [] }
@@ -54,13 +54,13 @@ router.post('/', (req, res) => {
     return res.status(400).json({ message: '参数错误' })
   }
 
-  const today = new Date().toISOString().slice(0, 10)
+  const recordDate = req.body.record_date || new Date().toISOString().slice(0, 10)
 
   const insertRecord = db.transaction(() => {
     // 创建饮食记录
     const record = db.prepare(
       'INSERT INTO diet_records (user_id, meal_type, record_date) VALUES (?, ?, ?)'
-    ).run(userId, meal_type, today)
+    ).run(userId, meal_type, recordDate)
 
     // 添加明细
     const insertItem = db.prepare(

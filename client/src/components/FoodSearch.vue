@@ -204,10 +204,10 @@ const cancel = () => {
 }
 
 const confirm = () => {
-  // 获取 mealType，添加到对应餐次
   const type = mealType.value
+  const recordDate = window.__selectedDate || new Date().toISOString().slice(0, 10)
   const e = new CustomEvent('add-diet', {
-    detail: { meal_type: type, foods: selected.value.map(f => ({ ...f })) }
+    detail: { meal_type: type, record_date: recordDate, foods: selected.value.map(f => ({ ...f })) }
   })
   window.dispatchEvent(e)
   selected.value = []

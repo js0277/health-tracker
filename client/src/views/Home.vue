@@ -3,7 +3,18 @@
     <!-- 顶部 -->
     <div class="header">
       <div class="header-title">轻食记</div>
-      <div class="header-date">{{ todayStr }}</div>
+      <!-- 日期选择器 -->
+      <div class="date-selector" @click="openDatePicker">
+        <span class="date-text">{{ selectedDateLabel }}</span>
+        <span class="date-arrow">&#9662;</span>
+      </div>
+      <input
+        ref="dateInput"
+        type="date"
+        :value="selectedDate"
+        @change="onDateChange"
+        class="hidden-date-input"
+      />
 
       <!-- 热量环 -->
       <div class="calorie-ring-wrap">
@@ -34,7 +45,7 @@
 
     <!-- 饮食记录 -->
     <div class="section">
-      <div class="section-title">今日饮食记录</div>
+      <div class="section-title">饮食记录</div>
 
       <div class="empty-hint" v-if="allMealsEmpty">
         <div class="empty-icon">🍽️</div>
@@ -57,8 +68,32 @@ import CalorieRing from '../components/CalorieRing.vue'
 import MealCard from '../components/MealCard.vue'
 import { dietApi } from '../api/index.js'
 
-const today = new Date()
-const todayStr = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日 周${['日','一','二','三','四','五','六'][today.getDay()]}`
+// 日期选择
+const dateInput = ref(null)
+const selectedDate = ref(new Date().toISOString().slice(0, 10))
+
+const selectedDateLabel = computed(() => {
+  const d = new Date(selectedDate.value)
+  const today = new Date()
+  const isToday = d.toDateString() === today.toDateString()
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const isYesterday = d.toDateString() === yesterday.toDateString()
+  const prefix = isToday ? '今天' : isYesterday ? '昨天' : ''
+  const weekDay = ['日','一','二','三','四','五','六'][d.getDay()]
+  const dateStr = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 周${weekDay}`
+  return prefix ? `${prefix} · ${dateStr}` : dateStr
+})
+
+function openDatePicker() {
+  dateInput.value?.showPicker()
+}
+
+function onDateChange(e) {
+  selectedDate.value = e.target.value
+  loadByDate()
+  window.__selectedDate = selectedDate.value
+}
 
 const targetKcal = ref(2000)
 const meals = ref([
@@ -68,10 +103,10 @@ const meals = ref([
   { type: 'snack', label: '加餐', emoji: '🍎', foods: [] },
 ])
 
-// 从 API 加载今日数据
-async function loadToday() {
+// 从 API 加载指定日期数据
+async function loadByDate() {
   try {
-    const data = await dietApi.getToday()
+    const data = await dietApi.getToday(selectedDate.value)
     meals.value.forEach(m => {
       m.foods = (data[m.type] || []).map(item => ({
         id: item.id,
@@ -89,13 +124,15 @@ async function loadToday() {
   }
 }
 
-onMounted(loadToday)
+// 初始化
+window.__selectedDate = selectedDate.value
+onMounted(loadByDate)
 
 // 监听食物添加事件 -> 调用 API
 const handleAddDiet = async (e) => {
   try {
-    await dietApi.addRecord(e.detail)
-    await loadToday()
+    await dietApi.addRecord({ ...e.detail, record_date: selectedDate.value })
+    await loadByDate()
   } catch (err) {
     console.error('添加失败:', err)
   }
@@ -122,7 +159,7 @@ const openMealAdd = (mealType) => {
 const handleDeleteFood = async (foodId) => {
   try {
     await dietApi.deleteItem(foodId)
-    await loadToday()
+    await loadByDate()
   } catch (err) {
     console.error('删除失败:', err)
   }
@@ -138,6 +175,15 @@ const handleDeleteFood = async (foodId) => {
 }
 .header-title { font-size: 18px; font-weight: 600; }
 .header-date { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+.date-selector {
+  display: flex; align-items: center; gap: 4px; margin-top: 6px;
+  cursor: pointer; user-select: none;
+}
+.date-text { font-size: 13px; opacity: 0.9; }
+.date-arrow { font-size: 10px; opacity: 0.6; }
+.hidden-date-input {
+  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
+}
 .calorie-ring-wrap {
   display: flex; align-items: center; justify-content: center;
   margin-top: 16px; gap: 22px;
