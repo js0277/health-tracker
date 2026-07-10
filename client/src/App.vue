@@ -45,12 +45,12 @@ const tabs = [
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  background: #F5F6FA; color: #333; display: flex; justify-content: center;
+  background: #F5F6FA; color: #333;
 }
-.app { width: 100%; max-width: 420px; min-height: 100vh; background: #F5F6FA; padding-bottom: 70px; position: relative; }
+.app { width: 100%; min-height: 100vh; background: #F5F6FA; padding-bottom: 70px; position: relative; }
 .tab-bar {
-  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 420px; background: #fff; display: flex;
+  position: fixed; bottom: 0; left: 0;
+  width: 100%; background: #fff; display: flex;
   border-top: 1px solid #eee; z-index: 50;
 }
 .tab-item {

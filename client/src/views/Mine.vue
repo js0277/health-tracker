@@ -47,7 +47,7 @@ const menuItems = [
   { icon: '🎯', label: '热量目标设置' },
   { icon: '📅', label: '历史记录' },
   { icon: '🔔', label: '提醒设置' },
-  { icon: '📖', label: '食物库' },
+  { icon: '📖', label: '食物库', action: () => router.push('/food-library') },
   { icon: '📤', label: '数据导出' },
 ]
 
