@@ -4,9 +4,13 @@
     <div class="header">
       <div class="header-title">轻食记</div>
       <!-- 日期选择器 -->
-      <div class="date-selector" @click="openDatePicker">
-        <span class="date-text">{{ selectedDateLabel }}</span>
-        <span class="date-arrow">&#9662;</span>
+      <div class="date-bar">
+        <button class="date-nav" @click="shiftDate(-1)" title="前一天">&lt;</button>
+        <div class="date-selector" @click="openDatePicker">
+          <span class="date-icon">&#128197;</span>
+          <span class="date-text">{{ selectedDateLabel }}</span>
+        </div>
+        <button class="date-nav" @click="shiftDate(1)" title="后一天">&gt;</button>
       </div>
       <input
         ref="dateInput"
@@ -87,6 +91,14 @@ const selectedDateLabel = computed(() => {
 
 function openDatePicker() {
   dateInput.value?.showPicker()
+}
+
+function shiftDate(days) {
+  const d = new Date(selectedDate.value)
+  d.setDate(d.getDate() + days)
+  selectedDate.value = d.toISOString().slice(0, 10)
+  loadByDate()
+  window.__selectedDate = selectedDate.value
 }
 
 function onDateChange(e) {
@@ -173,14 +185,27 @@ const handleDeleteFood = async (foodId) => {
   color: #fff; padding: 20px 20px 30px;
   border-radius: 0 0 24px 24px;
 }
-.header-title { font-size: 18px; font-weight: 600; }
-.header-date { font-size: 13px; opacity: 0.85; margin-top: 4px; }
-.date-selector {
-  display: flex; align-items: center; gap: 4px; margin-top: 6px;
-  cursor: pointer; user-select: none;
+.header-title { font-size: 18px; font-weight: 600; margin-bottom: 10px; }
+.date-bar {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
 }
-.date-text { font-size: 13px; opacity: 0.9; }
-.date-arrow { font-size: 10px; opacity: 0.6; }
+.date-nav {
+  width: 32px; height: 32px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.25); color: #fff;
+  font-size: 16px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.date-nav:active { background: rgba(255,255,255,0.4); }
+.date-selector {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 20px;
+  background: rgba(255,255,255,0.2);
+  cursor: pointer; user-select: none; transition: background 0.15s;
+}
+.date-selector:active { background: rgba(255,255,255,0.35); }
+.date-icon { font-size: 15px; }
+.date-text { font-size: 14px; font-weight: 500; white-space: nowrap; }
 .hidden-date-input {
   position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
 }
