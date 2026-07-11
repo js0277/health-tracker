@@ -3,6 +3,7 @@ import Home from '../views/Home.vue'
 import Weight from '../views/Weight.vue'
 import Mine from '../views/Mine.vue'
 import FoodLibrary from '../views/FoodLibrary.vue'
+import ReminderSettings from '../views/ReminderSettings.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 
@@ -12,6 +13,7 @@ const routes = [
   { path: '/weight', component: Weight, meta: { requiresAuth: true } },
   { path: '/mine', component: Mine, meta: { requiresAuth: true } },
   { path: '/food-library', component: FoodLibrary, meta: { requiresAuth: true } },
+  { path: '/reminder-settings', component: ReminderSettings, meta: { requiresAuth: true } },
   { path: '/login', component: Login, meta: { guest: true } },
   { path: '/register', component: Register, meta: { guest: true } },
 ]

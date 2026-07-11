@@ -46,9 +46,8 @@ const router = useRouter()
 const menuItems = [
   { icon: '🎯', label: '热量目标设置' },
   { icon: '📅', label: '历史记录' },
-  { icon: '🔔', label: '提醒设置' },
+  { icon: '🔔', label: '提醒设置', action: () => router.push('/reminder-settings') },
   { icon: '📖', label: '食物库', action: () => router.push('/food-library') },
-  { icon: '📤', label: '数据导出' },
 ]
 
 function handleLogout() {
