@@ -76,6 +76,13 @@ db.exec(`
   );
 `)
 
+// 兼容已有数据库：补充新字段（ALTER TABLE ... ADD COLUMN 幂等处理）
+const columns = db.prepare("PRAGMA table_info(users)").all()
+const colNames = columns.map(c => c.name)
+if (!colNames.includes('target_date')) {
+  db.exec('ALTER TABLE users ADD COLUMN target_date TEXT')
+}
+
 // 初始化默认用户和示例食物（只执行一次）
 // No default user - users register themselves
 

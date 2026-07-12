@@ -63,14 +63,30 @@
         @delete="handleDeleteFood"
       />
     </div>
+
+    <!-- 目标设置引导 -->
+    <GoalSetup :visible="showGoalSetup" @done="onGoalDone" />
+
+    <!-- 修改目标按钮 -->
+    <div class="edit-goal-btn" v-if="!showGoalSetup && goalInfo" @click="showGoalSetup = true">
+      {{ goalInfo.mode === 'lose' ? '📉' : goalInfo.mode === 'gain' ? '📈' : '⚖️' }}
+      {{ goalInfo.weight_diff > 0 ? '+' : '' }}{{ goalInfo.weight_diff }}kg · {{ goalInfo.diff_days }}天
+      <span class="edit-icon">✏️</span>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import CalorieRing from '../components/CalorieRing.vue'
 import MealCard from '../components/MealCard.vue'
-import { dietApi } from '../api/index.js'
+import GoalSetup from '../components/GoalSetup.vue'
+import { dietApi, authApi } from '../api/index.js'
+import { store } from '../store.js'
+
+const route = useRoute()
+const router = useRouter()
 
 // 日期选择
 const dateInput = ref(null)
@@ -108,12 +124,61 @@ function onDateChange(e) {
 }
 
 const targetKcal = ref(2000)
+const showGoalSetup = ref(false)
+const goalInfo = ref(null)
+
 const meals = ref([
   { type: 'breakfast', label: '早餐', emoji: '🌅', foods: [] },
   { type: 'lunch', label: '午餐', emoji: '☀️', foods: [] },
   { type: 'dinner', label: '晚餐', emoji: '🌙', foods: [] },
   { type: 'snack', label: '加餐', emoji: '🍎', foods: [] },
 ])
+
+// 检查用户是否已设置目标
+async function checkUserProfile() {
+  try {
+    const res = await authApi.me()
+    const u = res.user
+    // 已有 target_kcal 则使用
+    if (u.target_kcal && u.target_kcal > 0) {
+      targetKcal.value = u.target_kcal
+      store.targetKcal = u.target_kcal
+    }
+    // 检查是否设置了完整目标
+    if (!u.weight || !u.target_weight || !u.target_date) {
+      showGoalSetup.value = true
+    } else {
+      // 有目标信息，计算展示
+      const now = new Date(); now.setHours(0,0,0,0)
+      const target = new Date(u.target_date); target.setHours(0,0,0,0)
+      const diffDays = Math.max(1, Math.ceil((target - now) / 86400000))
+      const weightDiff = Math.round((u.target_weight - u.weight) * 10) / 10
+      goalInfo.value = {
+        weight_diff: weightDiff,
+        diff_days: diffDays,
+        mode: weightDiff < 0 ? 'lose' : weightDiff > 0 ? 'gain' : 'maintain',
+      }
+    }
+  } catch (e) {
+    console.log('获取用户信息失败', e)
+  }
+}
+
+// 目标设置完成回调
+function onGoalDone(result) {
+  if (result.target_kcal) {
+    targetKcal.value = result.target_kcal
+    store.targetKcal = result.target_kcal
+  }
+  showGoalSetup.value = false
+  goalInfo.value = {
+    weight_diff: result.weight_diff,
+    diff_days: result.diff_days,
+    mode: result.mode,
+  }
+  // 刷新饮食数据
+  loadByDate()
+}
 
 // 从 API 加载指定日期数据
 async function loadByDate() {
@@ -138,7 +203,15 @@ async function loadByDate() {
 
 // 初始化
 window.__selectedDate = selectedDate.value
-onMounted(loadByDate)
+onMounted(() => {
+  loadByDate()
+  checkUserProfile()
+  // 从 Mine 页面跳转过来编辑目标
+  if (route.query.editGoal) {
+    showGoalSetup.value = true
+    router.replace('/home')
+  }
+})
 
 // 监听食物添加事件 -> 调用 API
 const handleAddDiet = async (e) => {
@@ -228,4 +301,12 @@ const handleDeleteFood = async (foodId) => {
 .empty-hint { text-align: center; padding: 40px 0; color: #aaa; }
 .empty-icon { font-size: 48px; margin-bottom: 10px; }
 .empty-text { font-size: 14px; }
+.edit-goal-btn {
+  margin: 8px 16px 20px; padding: 10px 14px;
+  background: #E8F5E9; border-radius: 10px;
+  font-size: 13px; color: #388E3C; font-weight: 500;
+  display: flex; align-items: center; gap: 4px; cursor: pointer;
+}
+.edit-goal-btn:active { background: #C8E6C9; }
+.edit-icon { margin-left: auto; font-size: 12px; opacity: 0.7; }
 </style>

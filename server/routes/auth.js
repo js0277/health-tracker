@@ -67,7 +67,7 @@ router.post('/login', (req, res) => {
 // 获取当前用户信息
 router.get('/me', authenticate, (req, res) => {
   const user = db.prepare(
-    'SELECT id, username, nickname, avatar, gender, height, weight, target_kcal FROM users WHERE id = ?'
+    'SELECT id, username, nickname, avatar, gender, height, weight, target_kcal, target_weight, target_date FROM users WHERE id = ?'
   ).get(req.user.id)
 
   if (!user) {
@@ -87,6 +87,8 @@ router.put('/profile', authenticate, (req, res) => {
   if (height !== undefined) { fields.push('height=?'); values.push(height) }
   if (weight !== undefined) { fields.push('weight=?'); values.push(weight) }
   if (target_kcal !== undefined) { fields.push('target_kcal=?'); values.push(target_kcal) }
+  if (req.body.target_date !== undefined) { fields.push('target_date=?'); values.push(req.body.target_date) }
+  if (req.body.target_weight !== undefined) { fields.push('target_weight=?'); values.push(req.body.target_weight) }
 
   if (fields.length === 0) {
     return res.status(400).json({ message: '没有需要更新的字段' })
@@ -98,6 +100,78 @@ router.put('/profile', authenticate, (req, res) => {
   db.prepare(`UPDATE users SET ${fields.join(',')} WHERE id=?`).run(...values)
 
   res.json({ success: true })
+})
+
+// 设置体重目标 - 自动计算每日热量
+router.post('/goal', authenticate, (req, res) => {
+  const { current_weight, target_weight, target_date } = req.body
+
+  if (!current_weight || !target_weight || !target_date) {
+    return res.status(400).json({ message: '请填写完整信息' })
+  }
+  if (current_weight <= 0 || target_weight <= 0) {
+    return res.status(400).json({ message: '体重必须大于0' })
+  }
+
+  // 计算天数
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  const target = new Date(target_date)
+  target.setHours(0, 0, 0, 0)
+  const diffDays = Math.max(1, Math.ceil((target - now) / (1000 * 60 * 60 * 24)))
+
+  // 体重差值（正=增重，负=减重）
+  const weightDiff = target_weight - current_weight
+  const totalKcal = Math.abs(weightDiff) * 7700 // 1kg脂肪≈7700千卡
+
+  // 基础代谢估算：体重(kg) × 24（粗略基础代谢率）
+  // 日常消耗 ≈ BMR × 1.375（轻度活动）
+  const tdee = Math.round(current_weight * 24 * 1.375)
+
+  // 每日调整量
+  const dailyAdjust = Math.round(totalKcal / diffDays)
+
+  let targetKcal
+  if (weightDiff < 0) {
+    // 减重：TDEE - 每日缺口
+    targetKcal = tdee - dailyAdjust
+  } else if (weightDiff > 0) {
+    // 增重：TDEE + 每日盈余
+    targetKcal = tdee + dailyAdjust
+  } else {
+    // 维持体重
+    targetKcal = tdee
+  }
+
+  // 安全下限：不低于1200千卡/天，上限不超5000
+  targetKcal = Math.max(1200, Math.min(5000, targetKcal))
+
+  // 保存到用户记录
+  db.prepare(`
+    UPDATE users SET weight=?, target_weight=?, target_date=?, target_kcal=?, updated_at=datetime('now','localtime')
+    WHERE id=?
+  `).run(current_weight, target_weight, target_date, targetKcal, req.user.id)
+
+  // 同步写入一条体重记录
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const existing = db.prepare(
+    'SELECT id FROM weight_records WHERE user_id=? AND record_date=?'
+  ).get(req.user.id, todayStr)
+  if (!existing) {
+    db.prepare(`
+      INSERT INTO weight_records (user_id, weight, record_date, record_time, note)
+      VALUES (?, ?, ?, '08:00', '目标设置初始记录')
+    `).run(req.user.id, current_weight, todayStr)
+  }
+
+  res.json({
+    target_kcal: targetKcal,
+    tdee,
+    daily_adjust: dailyAdjust,
+    diff_days: diffDays,
+    weight_diff: Math.round(weightDiff * 10) / 10,
+    mode: weightDiff < 0 ? 'lose' : weightDiff > 0 ? 'gain' : 'maintain',
+  })
 })
 
 module.exports = router

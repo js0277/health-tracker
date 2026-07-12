@@ -29,11 +29,13 @@ export const authApi = {
   login: (data) => request('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
   me: () => request('/auth/me'),
   updateProfile: (data) => request('/auth/profile', { method: 'PUT', body: JSON.stringify(data) }),
+  setGoal: (data) => request('/auth/goal', { method: 'POST', body: JSON.stringify(data) }),
 }
 
 export const foodApi = {
   search: (keyword) => request(`/foods/search?keyword=${encodeURIComponent(keyword)}`),
   common: () => request('/foods/common'),
+  getAll: () => request('/foods?page=1&pageSize=999'),
 }
 
 export const dietApi = {
